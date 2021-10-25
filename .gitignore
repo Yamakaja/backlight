@@ -1,5 +1,6 @@
 # Build
 set_brightness
+set_brightness_dbg
 
 # Vim
 *~

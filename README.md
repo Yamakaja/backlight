@@ -10,20 +10,24 @@ For this, we fit an exponential between 0 and 1 (later mapped to 0 and `max_brig
 y = f(x) = (exp(alpha * x) - 1) / (exp(alpha) - 1)
 ```
 
-For the resulting `f(x) -> f(0) = 0` and `f(1) = 1` for all `alpha`, where `alpha` is a factor determining "how exponential" the curve appears. Values of around 3-4 for `alpha` usually work out well.
+For the resulting `f(x)`,  `f(0) = 0` and `f(1) = 1` for all `alpha`, where `alpha` is a factor determining "how exponential" the curve appears. Values of around 3-4 for `alpha` usually work out well.
 
-Because this is a monotonic function, we can easily calculate an inverse and use that to determine the current perceived brightness from the current pwm percentage:
+Because this is a monotonic function, we can easily calculate an inverse and use that to determine the current perceived brightness from the current PWM percentage:
 
 ```
 x = g(y) = log(y * (exp(alpha) - 1) + 1) / alpha
 ```
 
+Finally because we're only interested in updating the `y` value and don't actually need to know x, we can simplify `y' = f(g(y) + delta)` to:
+
+```
+y' = y * exp(alpha*delta) + (exp(alpha*delta) - 1) / (exp(alpha) - 1)
+```
+
 Finally this results in the following simple algorithm implemented in this tool:
 
-* Read current and max backlight pwm values (`brightness` and `max_brightness` for amdgpu backlights respectively)
-* Apply inverse `g(x)` to determine current perceived brightness
-* Add percentage to linear brightness scale
-* Apply `f(x)` to get back into the non-linear domain
+* Read current and max backlight PWM values (`brightness` and `max_brightness` for amdgpu backlights respectively)
+* Update `y` to `y'` as described above.
 * Scale real brightness \in [0;1] to [0;`max_brightness] and update backlight.
 
 # Installation / Usage

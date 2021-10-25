@@ -8,11 +8,13 @@
 #define MAX_BRIGHTNESS "/sys/class/backlight/amdgpu_bl0/max_brightness"
 #define ALPHA 3
 
+const float e_alpha = expf(ALPHA);
+
 int global_argc;
 char **global_argv;
 
 int file_to_int(const char *filename, int *out) {
-    FILE* ifile = fopen(filename, "r");    
+    FILE* ifile = fopen(filename, "r");
     if (!ifile) {
         fprintf(stderr, "%s: Failed to open %s: %s\n", global_argv[0], filename, strerror(errno));
         return -EINVAL;
@@ -58,25 +60,19 @@ int int_to_file(const char *filename, int val) {
 #define MIN(a, b) ((a) > (b) ? (b) : (a))
 int get_new_brightness(int current_brightness_i, int max_brightness_i, float alpha, int delta_i) {
     float current_brightness = (float) current_brightness_i / (float) max_brightness_i;
+    float delta = delta_i / 100.f;
+    float e_alpha_delta = expf(alpha * delta);
+    float new_brightness = (float) current_brightness * e_alpha_delta + (e_alpha_delta - 1) / (e_alpha - 1);
+
+    int out = (int) roundf(new_brightness * max_brightness_i);
+    out = MIN(out, max_brightness_i);
+    out = MAX(out, 0);
+
 #ifdef DEBUG
-    printf("current_brightness: %f\n", current_brightness);
-#endif
-    float linear_brightness = logf(current_brightness*(expf(alpha) - 1) + 1) / alpha;
-#ifdef DEBUG
-    printf("linear_brightness: %f\n", linear_brightness);
-#endif
-    linear_brightness += delta_i / 100.f;
-    linear_brightness = MIN(linear_brightness, 1.f);
-    linear_brightness = MAX(linear_brightness, 0.f);
-#ifdef DEBUG
-    printf("new linear_brightness: %f\n", linear_brightness);
+    printf("new_brightness = %f, out = %d\n", new_brightness, out);
 #endif
 
-    float new_brightness = (expf(alpha*linear_brightness) - 1.f) / (expf(alpha) - 1.f);
-#ifdef DEBUG
-    printf("new_brightness: %f\n", new_brightness);
-#endif
-    return (int) roundf(new_brightness*max_brightness_i);
+    return out;
 }
 #undef MAX
 #undef MIN
